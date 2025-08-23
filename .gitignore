@@ -1,0 +1,25 @@
+# Rust
+target/
+Cargo.lock
+*.rs.bk
+
+# WASM build artifacts
+pkg/
+wasm-pack.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCDRAG Web Terminal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #0a0a0a;
+            color: #00ff00;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #terminal {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a1a1a 100%);
+            border: 2px solid #00ff00;
+            margin: 10px;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+        }
+
+        .terminal-line {
+            margin: 2px 0;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .input-line {
+            display: flex;
+            align-items: center;
+        }
+
+        .prompt {
+            color: #00ff00;
+            margin-right: 8px;
+        }
+
+        #input-field {
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            outline: none;
+            flex: 1;
+            caret-color: #00ff00;
+        }
+
+        .output {
+            color: #ffffff;
+        }
+
+        .error {
+            color: #ff4444;
+        }
+
+        .warning {
+            color: #ffaa00;
+        }
+
+        .header {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .table {
+            margin: 10px 0;
+        }
+
+        .table-header {
+            color: #00ffff;
+            border-bottom: 1px solid #00ff00;
+            margin-bottom: 5px;
+        }
+
+        .table-row {
+            color: #ffffff;
+        }
+
+        .blink {
+            animation: blink 1s linear infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        .cursor::after {
+            content: '_';
+            animation: blink 1s linear infinite;
+            color: #00ff00;
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #00ff00;
+            font-size: 20px;
+            z-index: 1000;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading WASM module...</div>
+    <div id="terminal" class="hidden"></div>
+    
+    <script type="module">
+        import init, { McDragCalculator } from './pkg/mcdrag.js';
+
+        class Terminal {
+            constructor(element) {
+                this.element = element;
+                this.history = [];
+                this.historyIndex = 0;
+                this.inputBuffer = '';
+                this.currentState = 'IDLE';
+                this.inputQueue = [];
+                this.projectileData = {};
+                this.calculator = null;
+                this.currentField = null;
+                this.fields = [
+                    { key: 'ref_diameter', prompt: 'ENTER PROJECTILE REFERENCE DIAMETER (MM):', type: 'float' },
+                    { key: 'total_length', prompt: 'ENTER TOTAL PROJECTILE LENGTH (CALIBERS):', type: 'float' },
+                    { key: 'nose_length', prompt: 'ENTER NOSE LENGTH (CALIBERS):', type: 'float' },
+                    { key: 'rt_r', prompt: 'ENTER RT/R (HEADSHAPE PARAMETER):', type: 'float' },
+                    { key: 'boattail_length', prompt: 'ENTER BOATTAIL LENGTH (CALIBERS):', type: 'float' },
+                    { key: 'base_diameter', prompt: 'ENTER BASE DIAMETER (CALIBERS):', type: 'float' },
+                    { key: 'meplat_diameter', prompt: 'ENTER MEPLAT DIAMETER (CALIBERS):', type: 'float' },
+                    { key: 'band_diameter', prompt: 'ENTER ROTATING BAND DIAMETER (CALIBERS):', type: 'float' },
+                    { key: 'cg_location', prompt: 'ENTER CENTER OF GRAVITY LOCATION (CALIBERS FROM NOSE):', type: 'float' },
+                    { key: 'boundary_layer', prompt: 'ENTER THE BOUNDARY LAYER CODE (L/L, L/T, OR T/T):', type: 'boundary' },
+                    { key: 'identification', prompt: 'ENTER PROJECTILE IDENTIFICATION:', type: 'string' }
+                ];
+                this.fieldIndex = 0;
+            }
+
+            async init() {
+                await init();
+                this.calculator = new McDragCalculator();
+                document.getElementById('loading').classList.add('hidden');
+                this.element.classList.remove('hidden');
+                this.clear();
+                this.showWelcome();
+                this.createInputLine();
+            }
+
+            showWelcome() {
+                this.writeLine('MCDRAG WEB TERMINAL', 'header');
+                this.writeLine('DECEMBER 1974, R. L. MCCOY', 'header');
+                this.writeLine('Rust Implementation 2025, A. C. JOKELA\n');
+                this.writeLine('Type "help" for commands or "start" to begin calculation\n');
+            }
+
+            clear() {
+                this.element.innerHTML = '';
+            }
+
+            writeLine(text, className = 'output') {
+                const line = document.createElement('div');
+                line.className = `terminal-line ${className}`;
+                line.textContent = text;
+                this.element.appendChild(line);
+                this.scrollToBottom();
+            }
+
+            createInputLine() {
+                const inputLine = document.createElement('div');
+                inputLine.className = 'terminal-line input-line';
+                
+                const prompt = document.createElement('span');
+                prompt.className = 'prompt';
+                prompt.textContent = '> ';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.id = 'input-field';
+                input.autocomplete = 'off';
+                
+                inputLine.appendChild(prompt);
+                inputLine.appendChild(input);
+                this.element.appendChild(inputLine);
+                
+                input.focus();
+                this.scrollToBottom();
+                
+                input.addEventListener('keydown', (e) => this.handleKeyPress(e));
+            }
+
+            handleKeyPress(e) {
+                const input = e.target;
+                
+                if (e.key === 'Enter') {
+                    const value = input.value.trim();
+                    input.parentElement.remove();
+                    this.writeLine(`> ${value}`);
+                    
+                    if (this.currentState === 'INPUT') {
+                        this.processInput(value);
+                    } else {
+                        this.processCommand(value);
+                    }
+                    
+                    this.history.push(value);
+                    this.historyIndex = this.history.length;
+                    this.createInputLine();
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    if (this.historyIndex > 0) {
+                        this.historyIndex--;
+                        input.value = this.history[this.historyIndex];
+                    }
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    if (this.historyIndex < this.history.length - 1) {
+                        this.historyIndex++;
+                        input.value = this.history[this.historyIndex];
+                    } else {
+                        this.historyIndex = this.history.length;
+                        input.value = '';
+                    }
+                }
+            }
+
+            processCommand(command) {
+                switch (command.toLowerCase()) {
+                    case 'help':
+                        this.showHelp();
+                        break;
+                    case 'start':
+                        this.startInput();
+                        break;
+                    case 'clear':
+                        this.clear();
+                        this.showWelcome();
+                        break;
+                    case 'exit':
+                        this.writeLine('Thank you for using MCDRAG Web Terminal');
+                        break;
+                    default:
+                        if (command) {
+                            this.writeLine(`Unknown command: ${command}. Type "help" for available commands.`, 'error');
+                        }
+                }
+            }
+
+            showHelp() {
+                this.writeLine('\nAvailable Commands:', 'header');
+                this.writeLine('  start  - Begin new projectile calculation');
+                this.writeLine('  clear  - Clear the terminal');
+                this.writeLine('  help   - Show this help message');
+                this.writeLine('  exit   - Exit the program\n');
+            }
+
+            startInput() {
+                this.currentState = 'INPUT';
+                this.fieldIndex = 0;
+                this.projectileData = {};
+                this.writeLine('\nENTER THE MCDRAG INPUTS, ONE QUANTITY AT A TIME.\n', 'header');
+                
+                if (this.fields[this.fieldIndex].key === 'cg_location') {
+                    this.writeLine('[NOTE: CENTER OF GRAVITY LOCATION IS OPTIONAL; IF UNKNOWN, ENTER 0]\n', 'warning');
+                }
+                
+                if (this.fields[this.fieldIndex].key === 'boundary_layer') {
+                    this.writeLine('FOR ALL LAMINAR BOUNDARY LAYER, CODE = L/L');
+                    this.writeLine('FOR LAMINAR NOSE, TURBULENT AFTERBODY, CODE = L/T');
+                    this.writeLine('FOR ALL TURBULENT BOUNDARY LAYER, CODE = T/T\n');
+                }
+                
+                this.writeLine(this.fields[this.fieldIndex].prompt);
+            }
+
+            processInput(value) {
+                const field = this.fields[this.fieldIndex];
+                
+                if (field.type === 'float') {
+                    const num = parseFloat(value);
+                    if (isNaN(num)) {
+                        this.writeLine('Invalid number. Please try again.', 'error');
+                        this.writeLine(field.prompt);
+                        return;
+                    }
+                    this.projectileData[field.key] = num;
+                } else if (field.type === 'boundary') {
+                    const upperValue = value.toUpperCase();
+                    if (!['L/L', 'L/T', 'T/T'].includes(upperValue)) {
+                        this.writeLine('INCORRECT BOUNDARY LAYER CODE. PLEASE TRY AGAIN.', 'error');
+                        this.writeLine(field.prompt);
+                        return;
+                    }
+                    this.projectileData[field.key] = upperValue;
+                } else {
+                    this.projectileData[field.key] = value;
+                }
+                
+                this.fieldIndex++;
+                
+                if (this.fieldIndex < this.fields.length) {
+                    this.writeLine('');
+                    
+                    if (this.fields[this.fieldIndex].key === 'cg_location') {
+                        this.writeLine('[NOTE: CENTER OF GRAVITY LOCATION IS OPTIONAL; IF UNKNOWN, ENTER 0]', 'warning');
+                    }
+                    
+                    if (this.fields[this.fieldIndex].key === 'boundary_layer') {
+                        this.writeLine('FOR ALL LAMINAR BOUNDARY LAYER, CODE = L/L');
+                        this.writeLine('FOR LAMINAR NOSE, TURBULENT AFTERBODY, CODE = L/T');
+                        this.writeLine('FOR ALL TURBULENT BOUNDARY LAYER, CODE = T/T');
+                    }
+                    
+                    this.writeLine(this.fields[this.fieldIndex].prompt);
+                } else {
+                    this.calculateAndDisplay();
+                }
+            }
+
+            calculateAndDisplay() {
+                this.currentState = 'IDLE';
+                
+                const boundaryMap = {
+                    'L/L': 'LaminarLaminar',
+                    'L/T': 'LaminarTurbulent',
+                    'T/T': 'TurbulentTurbulent'
+                };
+                
+                const inputData = {
+                    ...this.projectileData,
+                    boundary_layer: boundaryMap[this.projectileData.boundary_layer]
+                };
+                
+                try {
+                    this.calculator.set_input(JSON.stringify(inputData));
+                    const resultJson = this.calculator.calculate();
+                    const result = JSON.parse(resultJson);
+                    
+                    this.displayResults(result);
+                } catch (error) {
+                    this.writeLine(`\nError: ${error}`, 'error');
+                }
+            }
+
+            displayResults(result) {
+                this.clear();
+                
+                this.writeLine('MCDRAG, DECEMBER 1974, R. L. MCCOY', 'header');
+                this.writeLine('');
+                this.writeLine(`PROJECTILE IDENTIFICATION: ${result.input_summary.identification}`, 'header');
+                this.writeLine('');
+                
+                // Input summary
+                this.writeLine('  REF.    TOTAL     NOSE    RT/R  BOATTAIL   BASE   MEPLAT   BAND     XCG   BOUND.');
+                this.writeLine('  DIA.   LENGTH   LENGTH          LENGTH    DIA.    DIA.    DIA.    NOSE   LAYER');
+                this.writeLine('  (MM)    (CAL)    (CAL)           (CAL)    (CAL)   (CAL)   (CAL)   (CAL)   CODE');
+                this.writeLine('');
+                
+                const s = result.input_summary;
+                const line = `${s.ref_diameter.toFixed(2).padStart(7)} ${s.total_length.toFixed(2).padStart(7)} ` +
+                           `${s.nose_length.toFixed(3).padStart(7)} ${s.rt_r.toFixed(3).padStart(6)} ` +
+                           `${s.boattail_length.toFixed(3).padStart(7)} ${s.base_diameter.toFixed(3).padStart(6)} ` +
+                           `${s.meplat_diameter.toFixed(3).padStart(6)} ${s.band_diameter.toFixed(3).padStart(6)} ` +
+                           `${s.cg_location.toFixed(2).padStart(6)}   ${s.boundary_layer}`;
+                this.writeLine(line);
+                this.writeLine('');
+                this.writeLine('');
+                
+                // Results table
+                this.writeLine('   M      CD0      CDH     CDSF    CDBND     CDBT     CDB    PB/PINF', 'table-header');
+                this.writeLine('');
+                
+                result.coefficients.forEach(coeff => {
+                    const row = `${coeff.mach.toFixed(3).padStart(6)} ${coeff.cd0.toFixed(3).padStart(7)} ` +
+                              `${coeff.cdh.toFixed(3).padStart(7)} ${coeff.cdsf.toFixed(3).padStart(7)} ` +
+                              `${coeff.cdbnd.toFixed(3).padStart(7)} ${coeff.cdbt.toFixed(3).padStart(7)} ` +
+                              `${coeff.cdb.toFixed(3).padStart(7)} ${coeff.pb_pinf.toFixed(3).padStart(7)}`;
+                    this.writeLine(row, 'table-row');
+                });
+                
+                // Diagnostics
+                if (result.diagnostics.length > 0) {
+                    this.writeLine('');
+                    this.writeLine('');
+                    result.diagnostics.forEach(diag => {
+                        this.writeLine(diag, 'warning');
+                    });
+                }
+                
+                this.writeLine('');
+                this.writeLine('');
+                this.writeLine('RUN ANOTHER CASE? Type "start" to begin or "exit" to quit.');
+            }
+
+            scrollToBottom() {
+                this.element.scrollTop = this.element.scrollHeight;
+            }
+        }
+
+        // Initialize terminal when page loads
+        window.addEventListener('DOMContentLoaded', async () => {
+            const terminal = new Terminal(document.getElementById('terminal'));
+            await terminal.init();
+        });
+    </script>
+</body>
+</html>
