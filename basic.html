@@ -185,9 +185,8 @@
         </div>
     </div>
 
-    <!-- Load wwwbasic from unpkg CDN -->
-    <script src="https://unpkg.com/wwwbasic@1.0.3/wwwbasic.min.js" 
-            onerror="console.error('Failed to load wwwbasic from CDN'); document.getElementById('output').textContent = 'Failed to load BASIC interpreter from CDN\n'; document.getElementById('loading').classList.add('hidden');"></script>
+    <!-- Load wwwbasic from local directory -->
+    <script src="wwwbasic/wwwbasic.js"></script>
     
     <script>
         let basic;
