@@ -267,6 +267,14 @@
                     case 'exit':
                         this.writeLine('Thank you for using MCDRAG Web Terminal');
                         break;
+                    case 'basic':
+                        this.writeLine('Opening BASIC demo version...');
+                        window.location.href = 'basic.html';
+                        break;
+                    case 'cpm':
+                        this.writeLine('Opening CP/M emulator information...');
+                        window.location.href = 'cpm-emulator.html';
+                        break;
                     default:
                         if (command) {
                             this.writeLine(`Unknown command: ${command}. Type "help" for available commands.`, 'error');
@@ -279,7 +287,10 @@
                 this.writeLine('  start  - Begin new projectile calculation');
                 this.writeLine('  clear  - Clear the terminal');
                 this.writeLine('  help   - Show this help message');
-                this.writeLine('  exit   - Exit the program\n');
+                this.writeLine('  exit   - Exit the program');
+                this.writeLine('\nOther Versions:', 'header');
+                this.writeLine('  basic  - Open BASIC demo version');
+                this.writeLine('  cpm    - Open CP/M emulator information\n');
             }
 
             startInput() {

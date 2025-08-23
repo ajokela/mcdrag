@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCDRAG - Authentic CP/M Experience</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #header {
+            background: linear-gradient(180deg, #111 0%, #000 100%);
+            padding: 15px 20px;
+            border-bottom: 2px solid #0f0;
+            text-align: center;
+        }
+
+        #header h1 {
+            font-size: 24px;
+            color: #0f0;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            margin-bottom: 5px;
+        }
+
+        #header p {
+            color: #0a0;
+            font-size: 14px;
+        }
+
+        #main-container {
+            flex: 1;
+            display: flex;
+            padding: 20px;
+            gap: 20px;
+        }
+
+        #emulator-section {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sidebar {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: rgba(0, 20, 0, 0.5);
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            padding: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        .panel h3 {
+            color: #0f0;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.8);
+            font-size: 16px;
+        }
+
+        #terminal-container {
+            flex: 1;
+            background: #000;
+            border: 3px solid #0f0;
+            border-radius: 5px;
+            padding: 10px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 50px rgba(0, 255, 0, 0.1);
+        }
+
+        #terminal {
+            width: 100%;
+            height: 100%;
+            background: #000;
+            color: #0f0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 10px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        .instructions {
+            color: #0a0;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .instructions ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+
+        .instructions li {
+            margin: 5px 0;
+        }
+
+        .instructions code {
+            background: rgba(0, 255, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        button {
+            background: linear-gradient(180deg, #003300 0%, #001100 100%);
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 12px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 3px;
+            transition: all 0.3s;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: linear-gradient(180deg, #004400 0%, #002200 100%);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.5);
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        #status {
+            color: #0f0;
+            font-size: 12px;
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 3px;
+            text-align: center;
+        }
+
+        /* CRT Effect */
+        #terminal-container::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                rgba(0, 0, 0, 0.15),
+                rgba(0, 0, 0, 0.15) 1px,
+                transparent 1px,
+                transparent 2px
+            );
+            pointer-events: none;
+        }
+
+        .program-selector {
+            margin: 10px 0;
+        }
+
+        .program-selector select {
+            width: 100%;
+            padding: 8px;
+            background: #001100;
+            color: #0f0;
+            border: 1px solid #0f0;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+        }
+
+        .note {
+            background: rgba(255, 255, 0, 0.1);
+            border-left: 3px solid #ff0;
+            padding: 10px;
+            margin: 10px 0;
+            color: #ff0;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>MCDRAG on CP/M</h1>
+        <p>Experience 1974 BASIC on an Authentic 8-bit Platform</p>
+    </div>
+
+    <div id="main-container">
+        <div id="emulator-section">
+            <div id="terminal-container">
+                <div id="terminal">
+                    <div style="text-align: center; margin-top: 100px;">
+                        <h2 style="color: #0f0; text-shadow: 0 0 10px #0f0;">CP/M Emulator Options</h2>
+                        <p style="margin: 20px; line-height: 1.8;">
+                            A full CP/M emulator requires significant resources and setup.<br>
+                            Here are your options for running the original MCDRAG:
+                        </p>
+                        <div style="margin: 30px auto; max-width: 600px; text-align: left;">
+                            <h3 style="color: #ff0; margin: 20px 0;">Option 1: Online CP/M Emulators</h3>
+                            <ul style="list-style: none; padding: 0 20px;">
+                                <li>→ <a href="https://www.pcjs.org/software/pcx86/app/microsoft/basic/mbasic/" target="_blank" style="color: #0ff;">PCjs MBASIC Online</a></li>
+                                <li>→ <a href="http://cpmsim.z80.de/" target="_blank" style="color: #0ff;">Z80 CP/M Simulator</a></li>
+                                <li>→ <a href="https://floooh.github.io/tiny8bit/cpc.html" target="_blank" style="color: #0ff;">Amstrad CPC Emulator</a></li>
+                            </ul>
+                            
+                            <h3 style="color: #ff0; margin: 20px 0;">Option 2: Use Our Implementations</h3>
+                            <ul style="list-style: none; padding: 0 20px;">
+                                <li>→ <a href="index.html" style="color: #0f0;">Full Rust Implementation (Recommended)</a></li>
+                                <li>→ <a href="basic.html" style="color: #0f0;">Simplified BASIC Demo</a></li>
+                            </ul>
+
+                            <h3 style="color: #ff0; margin: 20px 0;">Option 3: Desktop Emulators</h3>
+                            <ul style="list-style: none; padding: 0 20px;">
+                                <li>→ RunCPM - Modern CP/M emulator</li>
+                                <li>→ SIMH with CP/M - Full system simulator</li>
+                                <li>→ Z80Pack - Complete Z80 system emulator</li>
+                            </ul>
+                        </div>
+                        <div style="margin-top: 30px;">
+                            <p style="color: #ff0;">
+                                The original MCDRAG.txt BASIC program requires:<br>
+                                • Microsoft BASIC-80 (MBASIC) or compatible<br>
+                                • Support for PRINT USING, TAB(), and LPRINT<br>
+                                • Approximately 40KB of memory
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="sidebar">
+            <div class="panel">
+                <h3>Quick Start Guide</h3>
+                <div class="instructions">
+                    <p>To run MCDRAG on real CP/M:</p>
+                    <ul>
+                        <li>Start CP/M emulator</li>
+                        <li>Type <code>MBASIC</code></li>
+                        <li>Load the program with <code>LOAD "MCDRAG.BAS"</code></li>
+                        <li>Type <code>RUN</code></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>Navigation</h3>
+                <div class="controls">
+                    <button onclick="window.location.href='index.html'">Rust Implementation</button>
+                    <button onclick="window.location.href='basic.html'">Web BASIC Demo</button>
+                    <button onclick="downloadMCDRAG()">Download MCDRAG.BAS</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>About CP/M</h3>
+                <div class="instructions">
+                    <p>CP/M (Control Program/Monitor) was the dominant operating system for 8-bit computers in the late 1970s and early 1980s.</p>
+                    <div class="note">
+                        <strong>Historical Note:</strong> MCDRAG was written in 1974, predating even CP/M! It would have originally run on early minicomputers and timesharing systems.
+                    </div>
+                </div>
+            </div>
+
+            <div id="status">
+                Ready - Choose an option above
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function downloadMCDRAG() {
+            // Create a download link for the BASIC file
+            fetch('mcdrag.txt')
+                .then(response => response.text())
+                .then(text => {
+                    const blob = new Blob([text], { type: 'text/plain' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'MCDRAG.BAS';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+                    
+                    document.getElementById('status').textContent = 'MCDRAG.BAS downloaded!';
+                })
+                .catch(error => {
+                    document.getElementById('status').textContent = 'Error downloading file';
+                    console.error('Download error:', error);
+                });
+        }
+
+        // Show system info
+        window.addEventListener('DOMContentLoaded', () => {
+            const terminal = document.getElementById('terminal');
+            
+            // Add typewriter effect for fun
+            setTimeout(() => {
+                const status = document.getElementById('status');
+                status.innerHTML = 'System: 8080/Z80 • RAM: 64K • OS: CP/M 2.2';
+            }, 1000);
+        });
+    </script>
+</body>
+</html>
