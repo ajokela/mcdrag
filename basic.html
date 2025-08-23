@@ -234,7 +234,44 @@
                             // Extract line number and rest of the line
                             const match = line.match(/^(\d+)\s+(.*)$/);
                             if (match) {
-                                return match[1] + ' ' + match[2];
+                                let lineContent = match[2];
+                                
+                                // Replace unsupported commands
+                                // LPRINT -> PRINT (wwwbasic doesn't support LPRINT)
+                                lineContent = lineContent.replace(/^LPRINT/i, 'PRINT');
+                                
+                                // CLS is not supported, comment it out
+                                if (lineContent.match(/^CLS\s*$/i)) {
+                                    lineContent = 'REM ' + lineContent;
+                                }
+                                
+                                // KEY commands not supported
+                                if (lineContent.match(/^KEY\s/i)) {
+                                    lineContent = 'REM ' + lineContent;
+                                }
+                                
+                                // COLOR commands might not work, but let's try
+                                if (lineContent.match(/^COLOR\s/i)) {
+                                    lineContent = 'REM ' + lineContent;
+                                }
+                                
+                                // RESTORE command might need adjustment
+                                if (lineContent.match(/^RESTORE\s*$/i)) {
+                                    lineContent = 'RESTORE';
+                                }
+                                
+                                // Replace TAB with SPACE$ for simpler compatibility
+                                lineContent = lineContent.replace(/TAB\((\d+)\)/gi, (match, num) => {
+                                    return 'SPACE$(' + num + ')';
+                                });
+                                
+                                // Replace USING format strings (not well supported)
+                                if (lineContent.includes('USING')) {
+                                    // Comment out complex PRINT USING statements for now
+                                    lineContent = 'REM ' + lineContent;
+                                }
+                                
+                                return match[1] + ' ' + lineContent;
                             }
                             return line;
                         })
