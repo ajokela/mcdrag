@@ -185,8 +185,8 @@
         </div>
     </div>
 
-    <!-- Load wwwbasic from CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/wwwbasic@1.0.0/wwwbasic.js"></script>
+    <!-- Load wwwbasic from GitHub -->
+    <script src="https://rawcdn.githack.com/google/wwwbasic/master/wwwbasic.js"></script>
     
     <script>
         let basic;
@@ -195,6 +195,12 @@
 
         // Initialize BASIC interpreter
         async function initBasic() {
+            // Wait a bit to ensure wwwbasic is loaded
+            if (typeof wwwbasic === 'undefined') {
+                setTimeout(initBasic, 100);
+                return;
+            }
+
             // Create the BASIC interpreter
             basic = new wwwbasic.Basic({
                 canvas: null,
@@ -284,8 +290,12 @@
         }
 
         function stopProgram() {
-            if (basic) {
-                basic.stop();
+            if (basic && basic.stop) {
+                try {
+                    basic.stop();
+                } catch (e) {
+                    console.log('Stop not supported');
+                }
                 document.getElementById('output').textContent += '\n\nPROGRAM STOPPED\n';
                 document.getElementById('input').disabled = false;
             }
@@ -308,7 +318,7 @@
 
         // Handle direct BASIC commands
         document.getElementById('input').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !basic.isRunning()) {
+            if (e.key === 'Enter' && (!basic || !basic.isRunning || !basic.isRunning())) {
                 const command = e.target.value.toUpperCase().trim();
                 
                 if (command === 'RUN') {
