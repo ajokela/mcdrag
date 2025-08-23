@@ -198,9 +198,9 @@
         async function initBasic() {
             initAttempts++;
             
-            // Check if wwwbasic is loaded
-            if (typeof wwwbasic === 'undefined') {
-                console.log('Waiting for wwwbasic to load... attempt', initAttempts);
+            // Check if Basic is loaded (window.Basic, not wwwbasic)
+            if (typeof Basic === 'undefined') {
+                console.log('Waiting for Basic to load... attempt', initAttempts);
                 if (initAttempts < 50) {
                     setTimeout(initBasic, 200);
                 } else {
@@ -210,46 +210,10 @@
                 return;
             }
             
-            console.log('wwwbasic loaded successfully');
+            console.log('Basic loaded successfully');
 
-            // Create the BASIC interpreter
-            try {
-                console.log('Creating BASIC interpreter...');
-                basic = new wwwbasic.Basic({
-                    canvas: null,
-                    printFunction: function(str) {
-                        const output = document.getElementById('output');
-                        output.textContent += str;
-                        output.scrollTop = output.scrollHeight;
-                    },
-                    inputFunction: function(callback) {
-                        const input = document.getElementById('input');
-                        input.disabled = false;
-                        input.focus();
-                        
-                        input.onkeydown = function(e) {
-                            if (e.key === 'Enter') {
-                                const value = input.value;
-                                input.value = '';
-                                input.disabled = true;
-                                
-                                // Echo the input to the output
-                                const output = document.getElementById('output');
-                                output.textContent += value + '\n';
-                                output.scrollTop = output.scrollHeight;
-                                
-                                callback(value);
-                            }
-                        };
-                    }
-                });
-                console.log('BASIC interpreter created successfully');
-            } catch (error) {
-                console.error('Error creating BASIC interpreter:', error);
-                document.getElementById('output').textContent = 'ERROR creating interpreter: ' + error.message + '\n';
-                document.getElementById('loading').classList.add('hidden');
-                return;
-            }
+            // Basic is ready to use
+            console.log('BASIC interpreter is ready');
 
             // Load MCDRAG.txt
             try {
@@ -276,18 +240,12 @@
                         })
                         .join('\n');
                     
-                    console.log('Processed program, compiling...');
+                    console.log('Program processed and ready');
                     
-                    // Load the program into BASIC
-                    try {
-                        basic.compile(processedProgram);
-                        programLoaded = true;
-                        console.log('Program compiled successfully');
-                        document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
-                    } catch (compileError) {
-                        console.error('Compile error:', compileError);
-                        document.getElementById('output').textContent = 'ERROR compiling program: ' + compileError.message + '\n';
-                    }
+                    // Store the processed program
+                    programLoaded = true;
+                    window.processedProgram = processedProgram;
+                    document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
                 } else {
                     document.getElementById('output').textContent = 'ERROR: Could not load MCDRAG.txt\n';
                 }
@@ -305,7 +263,7 @@
         }
 
         function runProgram() {
-            if (!programLoaded) {
+            if (!programLoaded || !window.processedProgram) {
                 document.getElementById('output').textContent += 'No program loaded. Please wait...\n';
                 return;
             }
@@ -313,7 +271,12 @@
             document.getElementById('output').textContent += '\nRUNNING PROGRAM...\n\n';
             
             try {
-                basic.run();
+                // Clear the output first
+                document.getElementById('output').textContent = '';
+                
+                // Run the BASIC program
+                // Note: Basic() function runs immediately, not asynchronously
+                Basic(window.processedProgram, null);
             } catch (error) {
                 document.getElementById('output').textContent += '\nERROR: ' + error.message + '\n';
                 console.error('Runtime error:', error);
@@ -321,15 +284,10 @@
         }
 
         function stopProgram() {
-            if (basic && basic.stop) {
-                try {
-                    basic.stop();
-                } catch (e) {
-                    console.log('Stop not supported');
-                }
-                document.getElementById('output').textContent += '\n\nPROGRAM STOPPED\n';
-                document.getElementById('input').disabled = false;
-            }
+            // wwwbasic doesn't have a stop function
+            // We can only refresh the page or clear the output
+            document.getElementById('output').textContent += '\n\nPROGRAM STOPPED (Refresh page to fully reset)\n';
+            document.getElementById('input').disabled = false;
         }
 
         function clearScreen() {
@@ -349,7 +307,7 @@
 
         // Handle direct BASIC commands
         document.getElementById('input').addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && (!basic || !basic.isRunning || !basic.isRunning())) {
+            if (e.key === 'Enter') {
                 const command = e.target.value.toUpperCase().trim();
                 
                 if (command === 'RUN') {
