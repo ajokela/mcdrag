@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCDRAG - Real CP/M Emulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000;
+            color: #0f0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        #header {
+            background: #111;
+            padding: 15px 20px;
+            border-bottom: 2px solid #0f0;
+            text-align: center;
+        }
+
+        #header h1 {
+            font-size: 24px;
+            color: #0f0;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+        }
+
+        #container {
+            flex: 1;
+            padding: 20px;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        #emulator-frame {
+            flex: 2;
+            min-width: 600px;
+            background: #000;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            padding: 10px;
+            position: relative;
+        }
+
+        #emulator-iframe {
+            width: 100%;
+            height: 600px;
+            border: none;
+            background: #000;
+        }
+
+        #sidebar {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .panel {
+            background: rgba(0, 50, 0, 0.3);
+            border: 2px solid #0f0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .panel h3 {
+            color: #0f0;
+            margin-bottom: 10px;
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.5);
+        }
+
+        .panel p, .panel ul {
+            color: #0a0;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+
+        .panel ul {
+            padding-left: 20px;
+        }
+
+        .panel code {
+            background: rgba(0, 255, 0, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            color: #0f0;
+            font-weight: bold;
+        }
+
+        button {
+            width: 100%;
+            background: #002200;
+            color: #0f0;
+            border: 2px solid #0f0;
+            padding: 12px;
+            margin: 5px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+            border-radius: 3px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #003300;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+        }
+
+        .note {
+            background: rgba(255, 255, 0, 0.1);
+            border-left: 3px solid #ff0;
+            padding: 10px;
+            margin: 10px 0;
+            color: #ff0;
+            font-size: 13px;
+        }
+
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #0f0;
+            font-size: 18px;
+            text-align: center;
+            background: #000;
+            padding: 20px;
+            border: 2px solid #0f0;
+            border-radius: 5px;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>MCDRAG on Real CP/M Emulator</h1>
+        <p style="color: #0a0; margin-top: 5px;">Running Stefan Tramm's Emu8080</p>
+    </div>
+
+    <div id="container">
+        <div id="emulator-frame">
+            <div id="loading">
+                Loading CP/M Emulator...<br>
+                <small>This may take a moment</small>
+            </div>
+            <!-- Stefan Tramm's emulator -->
+            <iframe id="emulator-iframe" 
+                    src="https://st.sdf-eu.org/i8080/" 
+                    onload="emulatorLoaded()"
+                    sandbox="allow-scripts allow-same-origin">
+            </iframe>
+        </div>
+
+        <div id="sidebar">
+            <div class="panel">
+                <h3>Quick Instructions</h3>
+                <ol style="color: #0f0;">
+                    <li>Click in the emulator window to focus</li>
+                    <li>Type <code>B:</code> to switch to drive B</li>
+                    <li>Type <code>MBASIC</code> to start Microsoft BASIC</li>
+                    <li>In BASIC, type commands to enter MCDRAG</li>
+                    <li>Type <code>RUN</code> to execute</li>
+                </ol>
+                <div class="note">
+                    <strong>Note:</strong> This is a real Intel 8080 emulator running CP/M 2.2
+                </div>
+            </div>
+
+            <div class="panel">
+                <h3>MCDRAG Program Entry</h3>
+                <p>Since we can't directly load files, you'll need to type in a simplified version or use the buttons below for other options:</p>
+                <button onclick="showSimpleProgram()">Show Simple BASIC Program</button>
+                <button onclick="window.location.href='index.html'">Use Rust Version</button>
+                <button onclick="window.location.href='basic.html'">Use Web BASIC</button>
+            </div>
+
+            <div id="program-panel" class="panel hidden">
+                <h3>Simple Test Program</h3>
+                <p>Type this in MBASIC:</p>
+                <pre style="color: #0f0; font-size: 12px;">
+10 PRINT "MCDRAG DEMO"
+20 PRINT "============"
+30 INPUT "Enter Mach: ", M
+40 CD = 0.2 + 0.3/M
+50 PRINT "Drag Coeff: "; CD
+60 END
+                </pre>
+            </div>
+
+            <div class="panel">
+                <h3>About This Emulator</h3>
+                <p>This is Stefan Tramm's Emu8080 emulator, providing:</p>
+                <ul>
+                    <li>Intel 8080 CPU emulation</li>
+                    <li>CP/M 2.2 operating system</li>
+                    <li>VT100 terminal emulation</li>
+                    <li>Multiple disk drives</li>
+                    <li>Microsoft BASIC-80</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function emulatorLoaded() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function showSimpleProgram() {
+            const panel = document.getElementById('program-panel');
+            panel.classList.toggle('hidden');
+        }
+
+        // Try to communicate with the iframe (may be blocked by CORS)
+        window.addEventListener('message', function(e) {
+            console.log('Message from emulator:', e.data);
+        });
+
+        // Alternative: Create our own minimal CP/M emulator
+        function createMinimalEmulator() {
+            // This would require implementing:
+            // 1. Z80/8080 CPU emulation
+            // 2. CP/M BIOS calls
+            // 3. Terminal emulation
+            // 4. Disk image handling
+            
+            // For now, we'll use the iframe approach
+        }
+    </script>
+</body>
+</html>
