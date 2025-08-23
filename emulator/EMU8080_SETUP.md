@@ -33,10 +33,23 @@ Modern browsers have deprecated WebSQL in favor of IndexedDB. The original Emu80
 
 ## Troubleshooting
 
+### WebDB Not Supported Error
 If you see "WebDB not supported" error:
 - Check browser console for polyfill loading messages
 - Ensure JavaScript is enabled
 - Try a different browser (Chrome/Edge/Firefox recommended)
+
+### Terminal Display Issues
+If the terminal cursor doesn't align with typed text:
+- The CSS fixes in emu8080.html force consistent font sizing
+- Line height is set to 16px for proper spacing
+- Auto-scroll is enabled via MutationObserver
+
+### Text Not Scrolling
+If terminal text builds up without scrolling:
+- Auto-scroll JavaScript watches for content changes
+- Scrolls to bottom on every keypress
+- Custom scrollbar styling shows scroll position
 
 ## Files Not in Git
 
