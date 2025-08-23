@@ -185,61 +185,86 @@
         </div>
     </div>
 
-    <!-- Load wwwbasic from GitHub -->
-    <script src="https://rawcdn.githack.com/google/wwwbasic/master/wwwbasic.js"></script>
+    <!-- Load wwwbasic from unpkg CDN -->
+    <script src="https://unpkg.com/wwwbasic@1.0.3/wwwbasic.min.js" 
+            onerror="console.error('Failed to load wwwbasic from CDN'); document.getElementById('output').textContent = 'Failed to load BASIC interpreter from CDN\n'; document.getElementById('loading').classList.add('hidden');"></script>
     
     <script>
         let basic;
         let programLoaded = false;
         let mcdragProgram = '';
+        let initAttempts = 0;
 
         // Initialize BASIC interpreter
         async function initBasic() {
-            // Wait a bit to ensure wwwbasic is loaded
+            initAttempts++;
+            
+            // Check if wwwbasic is loaded
             if (typeof wwwbasic === 'undefined') {
-                setTimeout(initBasic, 100);
+                console.log('Waiting for wwwbasic to load... attempt', initAttempts);
+                if (initAttempts < 50) {
+                    setTimeout(initBasic, 200);
+                } else {
+                    document.getElementById('output').textContent = 'ERROR: Failed to load BASIC interpreter after ' + initAttempts + ' attempts.\n';
+                    document.getElementById('loading').classList.add('hidden');
+                }
+                return;
+            }
+            
+            console.log('wwwbasic loaded successfully');
+
+            // Create the BASIC interpreter
+            try {
+                console.log('Creating BASIC interpreter...');
+                basic = new wwwbasic.Basic({
+                    canvas: null,
+                    printFunction: function(str) {
+                        const output = document.getElementById('output');
+                        output.textContent += str;
+                        output.scrollTop = output.scrollHeight;
+                    },
+                    inputFunction: function(callback) {
+                        const input = document.getElementById('input');
+                        input.disabled = false;
+                        input.focus();
+                        
+                        input.onkeydown = function(e) {
+                            if (e.key === 'Enter') {
+                                const value = input.value;
+                                input.value = '';
+                                input.disabled = true;
+                                
+                                // Echo the input to the output
+                                const output = document.getElementById('output');
+                                output.textContent += value + '\n';
+                                output.scrollTop = output.scrollHeight;
+                                
+                                callback(value);
+                            }
+                        };
+                    }
+                });
+                console.log('BASIC interpreter created successfully');
+            } catch (error) {
+                console.error('Error creating BASIC interpreter:', error);
+                document.getElementById('output').textContent = 'ERROR creating interpreter: ' + error.message + '\n';
+                document.getElementById('loading').classList.add('hidden');
                 return;
             }
 
-            // Create the BASIC interpreter
-            basic = new wwwbasic.Basic({
-                canvas: null,
-                printFunction: function(str) {
-                    const output = document.getElementById('output');
-                    output.textContent += str;
-                    output.scrollTop = output.scrollHeight;
-                },
-                inputFunction: function(callback) {
-                    const input = document.getElementById('input');
-                    input.disabled = false;
-                    input.focus();
-                    
-                    input.onkeydown = function(e) {
-                        if (e.key === 'Enter') {
-                            const value = input.value;
-                            input.value = '';
-                            input.disabled = true;
-                            
-                            // Echo the input to the output
-                            const output = document.getElementById('output');
-                            output.textContent += value + '\n';
-                            output.scrollTop = output.scrollHeight;
-                            
-                            callback(value);
-                        }
-                    };
-                }
-            });
-
             // Load MCDRAG.txt
             try {
+                console.log('Fetching mcdrag.txt...');
                 const response = await fetch('mcdrag.txt');
+                console.log('Fetch response:', response.status);
                 if (response.ok) {
                     mcdragProgram = await response.text();
+                    console.log('Program loaded, length:', mcdragProgram.length);
                     
-                    // Remove line numbers for wwwbasic (it expects them differently)
-                    // wwwbasic expects the format: line_number COMMAND
+                    // Process the BASIC program
                     const lines = mcdragProgram.split('\n');
+                    console.log('Processing', lines.length, 'lines');
+                    
                     const processedProgram = lines
                         .filter(line => line.trim() !== '')
                         .map(line => {
@@ -252,11 +277,18 @@
                         })
                         .join('\n');
                     
-                    // Load the program into BASIC
-                    basic.compile(processedProgram);
-                    programLoaded = true;
+                    console.log('Processed program, compiling...');
                     
-                    document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
+                    // Load the program into BASIC
+                    try {
+                        basic.compile(processedProgram);
+                        programLoaded = true;
+                        console.log('Program compiled successfully');
+                        document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
+                    } catch (compileError) {
+                        console.error('Compile error:', compileError);
+                        document.getElementById('output').textContent = 'ERROR compiling program: ' + compileError.message + '\n';
+                    }
                 } else {
                     document.getElementById('output').textContent = 'ERROR: Could not load MCDRAG.txt\n';
                 }
