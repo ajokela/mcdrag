@@ -215,66 +215,22 @@
             // Basic is ready to use
             console.log('BASIC interpreter is ready');
 
-            // Load MCDRAG.txt
+            // Load simplified BASIC program instead of full MCDRAG
             try {
-                console.log('Fetching mcdrag.txt...');
-                const response = await fetch('mcdrag.txt');
+                console.log('Fetching mcdrag_simple.bas...');
+                const response = await fetch('mcdrag_simple.bas');
                 console.log('Fetch response:', response.status);
                 if (response.ok) {
                     mcdragProgram = await response.text();
                     console.log('Program loaded, length:', mcdragProgram.length);
                     
-                    // Process the BASIC program
+                    // Process the BASIC program (simplified version needs minimal processing)
                     const lines = mcdragProgram.split('\n');
                     console.log('Processing', lines.length, 'lines');
                     
+                    // For the simple program, just ensure proper line format
                     const processedProgram = lines
                         .filter(line => line.trim() !== '')
-                        .map(line => {
-                            // Extract line number and rest of the line
-                            const match = line.match(/^(\d+)\s+(.*)$/);
-                            if (match) {
-                                let lineContent = match[2];
-                                
-                                // Replace unsupported commands
-                                // LPRINT -> PRINT (wwwbasic doesn't support LPRINT)
-                                lineContent = lineContent.replace(/^LPRINT/i, 'PRINT');
-                                
-                                // CLS is not supported, comment it out
-                                if (lineContent.match(/^CLS\s*$/i)) {
-                                    lineContent = 'REM ' + lineContent;
-                                }
-                                
-                                // KEY commands not supported
-                                if (lineContent.match(/^KEY\s/i)) {
-                                    lineContent = 'REM ' + lineContent;
-                                }
-                                
-                                // COLOR commands might not work, but let's try
-                                if (lineContent.match(/^COLOR\s/i)) {
-                                    lineContent = 'REM ' + lineContent;
-                                }
-                                
-                                // RESTORE command might need adjustment
-                                if (lineContent.match(/^RESTORE\s*$/i)) {
-                                    lineContent = 'RESTORE';
-                                }
-                                
-                                // Replace TAB with SPACE$ for simpler compatibility
-                                lineContent = lineContent.replace(/TAB\((\d+)\)/gi, (match, num) => {
-                                    return 'SPACE$(' + num + ')';
-                                });
-                                
-                                // Replace USING format strings (not well supported)
-                                if (lineContent.includes('USING')) {
-                                    // Comment out complex PRINT USING statements for now
-                                    lineContent = 'REM ' + lineContent;
-                                }
-                                
-                                return match[1] + ' ' + lineContent;
-                            }
-                            return line;
-                        })
                         .join('\n');
                     
                     console.log('Program processed and ready');
@@ -282,7 +238,20 @@
                     // Store the processed program
                     programLoaded = true;
                     window.processedProgram = processedProgram;
-                    document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
+                    
+                    // Debug: show first few lines to check processing
+                    const debugLines = processedProgram.split('\n').slice(0, 100);
+                    console.log('First 100 lines of processed program:');
+                    debugLines.forEach((line, i) => {
+                        if (line.includes('PRINT') || line.includes('TAB') || line.includes('USING')) {
+                            console.log(`Line ${i}: ${line}`);
+                        }
+                    });
+                    
+                    document.getElementById('output').textContent = 'MCDRAG SIMPLIFIED DEMO LOADED\n\n' +
+                        'Note: This is a simplified version due to interpreter limitations.\n' +
+                        'For full functionality, use the Rust version.\n\n' +
+                        'Type RUN to execute or LIST to view the program\n\n';
                 } else {
                     document.getElementById('output').textContent = 'ERROR: Could not load MCDRAG.txt\n';
                 }
@@ -305,14 +274,12 @@
                 return;
             }
             
-            document.getElementById('output').textContent += '\nRUNNING PROGRAM...\n\n';
+            // Clear output for new run
+            document.getElementById('output').textContent = '';
             
             try {
-                // Clear the output first
-                document.getElementById('output').textContent = '';
-                
-                // Run the BASIC program
-                // Note: Basic() function runs immediately, not asynchronously
+                console.log('Running BASIC program...');
+                // Run the simplified MCDRAG demo
                 Basic(window.processedProgram, null);
             } catch (error) {
                 document.getElementById('output').textContent += '\nERROR: ' + error.message + '\n';
