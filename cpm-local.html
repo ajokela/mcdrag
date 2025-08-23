@@ -191,7 +191,7 @@
 
         <div id="sidebar">
             <div class="panel">
-                <div class="success">✓ Running Locally - Full CP/M System</div>
+                <div class="success">✓ Running Locally - Full CP/M System with WebSQL Polyfill</div>
                 <h3>Quick Start Guide</h3>
                 <ol>
                     <li>Click in the emulator window</li>
@@ -253,7 +253,17 @@ SYSTEM      - Exit to CP/M
             </div>
 
             <div class="note">
-                <strong>Note:</strong> This is a complete Intel 8080 emulator running CP/M 2.2 with Microsoft BASIC-80. The system includes 64KB RAM and multiple disk drives.
+                <strong>Note:</strong> This is a complete Intel 8080 emulator running CP/M 2.2 with Microsoft BASIC-80. The system includes 64KB RAM and multiple disk drives. Modern browsers use a WebSQL polyfill for disk storage.
+            </div>
+            
+            <div class="panel">
+                <h3>Storage Information</h3>
+                <p>This emulator uses WebSQL for disk storage. Since WebSQL is deprecated in modern browsers, we've included a polyfill that:</p>
+                <ul style="color: #0a0; padding-left: 20px; margin: 10px 0;">
+                    <li>Provides in-memory disk emulation</li>
+                    <li>Uses localStorage for persistence when available</li>
+                    <li>Maintains full CP/M disk compatibility</li>
+                </ul>
             </div>
         </div>
     </div>
