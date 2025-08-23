@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCDRAG - Original BASIC Version</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #000080;
+            color: #ffffff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        #header {
+            background-color: #0000aa;
+            padding: 10px 20px;
+            border-bottom: 2px solid #ffffff;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #header h1 {
+            font-size: 20px;
+            color: #ffff00;
+            text-shadow: 2px 2px 0px #000000;
+        }
+
+        #header .info {
+            color: #00ffff;
+            font-size: 14px;
+        }
+
+        #terminal-container {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #output {
+            flex: 1;
+            background-color: #000044;
+            border: 2px solid #00ffff;
+            padding: 10px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            white-space: pre;
+            color: #ffffff;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        #input-container {
+            margin-top: 10px;
+            display: flex;
+            background-color: #000044;
+            border: 2px solid #00ffff;
+            padding: 5px;
+        }
+
+        #prompt {
+            color: #ffff00;
+            margin-right: 5px;
+            line-height: 30px;
+        }
+
+        #input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #ffffff;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            outline: none;
+            line-height: 30px;
+        }
+
+        #loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: #0000aa;
+            padding: 20px 40px;
+            border: 3px solid #ffff00;
+            color: #ffff00;
+            font-size: 18px;
+            z-index: 1000;
+            text-align: center;
+            box-shadow: 10px 10px 0px rgba(0, 0, 0, 0.5);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #controls {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background-color: #0000aa;
+            color: #ffffff;
+            border: 2px solid #00ffff;
+            padding: 8px 16px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background-color: #0000ff;
+            box-shadow: 2px 2px 0px rgba(0, 255, 255, 0.5);
+        }
+
+        button:active {
+            transform: translate(1px, 1px);
+        }
+
+        .blink {
+            animation: blink 1s linear infinite;
+        }
+
+        @keyframes blink {
+            0% { opacity: 1; }
+            50% { opacity: 0; }
+            100% { opacity: 1; }
+        }
+
+        /* Retro CRT effect */
+        #output::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">
+        <div>Loading BASIC Interpreter...</div>
+        <div style="font-size: 12px; margin-top: 10px;">Please wait</div>
+    </div>
+
+    <div id="header">
+        <h1>MCDRAG BASIC - December 1974</h1>
+        <div class="info">Original BASIC Implementation | R. L. McCoy</div>
+    </div>
+
+    <div id="terminal-container">
+        <div id="output"></div>
+        <div id="input-container">
+            <span id="prompt">?</span>
+            <input type="text" id="input" autocomplete="off" disabled>
+        </div>
+        <div id="controls">
+            <button onclick="runProgram()">RUN</button>
+            <button onclick="stopProgram()">STOP</button>
+            <button onclick="clearScreen()">CLEAR</button>
+            <button onclick="listProgram()">LIST</button>
+            <button onclick="window.location.href='index.html'">Rust Version</button>
+        </div>
+    </div>
+
+    <!-- Load wwwbasic from CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/wwwbasic@1.0.0/wwwbasic.js"></script>
+    
+    <script>
+        let basic;
+        let programLoaded = false;
+        let mcdragProgram = '';
+
+        // Initialize BASIC interpreter
+        async function initBasic() {
+            // Create the BASIC interpreter
+            basic = new wwwbasic.Basic({
+                canvas: null,
+                printFunction: function(str) {
+                    const output = document.getElementById('output');
+                    output.textContent += str;
+                    output.scrollTop = output.scrollHeight;
+                },
+                inputFunction: function(callback) {
+                    const input = document.getElementById('input');
+                    input.disabled = false;
+                    input.focus();
+                    
+                    input.onkeydown = function(e) {
+                        if (e.key === 'Enter') {
+                            const value = input.value;
+                            input.value = '';
+                            input.disabled = true;
+                            
+                            // Echo the input to the output
+                            const output = document.getElementById('output');
+                            output.textContent += value + '\n';
+                            output.scrollTop = output.scrollHeight;
+                            
+                            callback(value);
+                        }
+                    };
+                }
+            });
+
+            // Load MCDRAG.txt
+            try {
+                const response = await fetch('mcdrag.txt');
+                if (response.ok) {
+                    mcdragProgram = await response.text();
+                    
+                    // Remove line numbers for wwwbasic (it expects them differently)
+                    // wwwbasic expects the format: line_number COMMAND
+                    const lines = mcdragProgram.split('\n');
+                    const processedProgram = lines
+                        .filter(line => line.trim() !== '')
+                        .map(line => {
+                            // Extract line number and rest of the line
+                            const match = line.match(/^(\d+)\s+(.*)$/);
+                            if (match) {
+                                return match[1] + ' ' + match[2];
+                            }
+                            return line;
+                        })
+                        .join('\n');
+                    
+                    // Load the program into BASIC
+                    basic.compile(processedProgram);
+                    programLoaded = true;
+                    
+                    document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
+                } else {
+                    document.getElementById('output').textContent = 'ERROR: Could not load MCDRAG.txt\n';
+                }
+            } catch (error) {
+                document.getElementById('output').textContent = 'ERROR: ' + error.message + '\n';
+                console.error('Error loading MCDRAG.txt:', error);
+            }
+
+            // Hide loading screen
+            document.getElementById('loading').classList.add('hidden');
+            
+            // Enable input
+            document.getElementById('input').disabled = false;
+            document.getElementById('input').focus();
+        }
+
+        function runProgram() {
+            if (!programLoaded) {
+                document.getElementById('output').textContent += 'No program loaded. Please wait...\n';
+                return;
+            }
+            
+            document.getElementById('output').textContent += '\nRUNNING PROGRAM...\n\n';
+            
+            try {
+                basic.run();
+            } catch (error) {
+                document.getElementById('output').textContent += '\nERROR: ' + error.message + '\n';
+                console.error('Runtime error:', error);
+            }
+        }
+
+        function stopProgram() {
+            if (basic) {
+                basic.stop();
+                document.getElementById('output').textContent += '\n\nPROGRAM STOPPED\n';
+                document.getElementById('input').disabled = false;
+            }
+        }
+
+        function clearScreen() {
+            document.getElementById('output').textContent = 'MCDRAG BASIC PROGRAM LOADED\n\nType RUN to execute or LIST to view the program\n\n';
+        }
+
+        function listProgram() {
+            if (!programLoaded) {
+                document.getElementById('output').textContent += 'No program loaded.\n';
+                return;
+            }
+            
+            document.getElementById('output').textContent += '\n--- PROGRAM LISTING ---\n';
+            document.getElementById('output').textContent += mcdragProgram;
+            document.getElementById('output').textContent += '\n--- END OF LISTING ---\n\n';
+        }
+
+        // Handle direct BASIC commands
+        document.getElementById('input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !basic.isRunning()) {
+                const command = e.target.value.toUpperCase().trim();
+                
+                if (command === 'RUN') {
+                    e.preventDefault();
+                    e.target.value = '';
+                    runProgram();
+                } else if (command === 'LIST') {
+                    e.preventDefault();
+                    e.target.value = '';
+                    listProgram();
+                } else if (command === 'CLEAR' || command === 'CLS') {
+                    e.preventDefault();
+                    e.target.value = '';
+                    clearScreen();
+                } else if (command === 'STOP') {
+                    e.preventDefault();
+                    e.target.value = '';
+                    stopProgram();
+                }
+            }
+        });
+
+        // Initialize when page loads
+        window.addEventListener('DOMContentLoaded', initBasic);
+    </script>
+</body>
+</html>
