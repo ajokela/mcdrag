@@ -27,3 +27,6 @@ Thumbs.db
 # External dependencies
 wwwbasic/
 emu8080/
+
+# Claude development instructions
+CLAUDE.md
